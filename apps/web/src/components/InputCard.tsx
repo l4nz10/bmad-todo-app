@@ -2,15 +2,16 @@ import { useState, useRef, type KeyboardEvent } from 'react';
 
 interface InputCardProps {
   onSubmit?: (text: string) => void;
+  disabled?: boolean;
 }
 
-export function InputCard({ onSubmit }: InputCardProps) {
+export function InputCard({ onSubmit, disabled }: InputCardProps) {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && text.trim()) {
+    if (e.key === 'Enter' && text.trim() && !disabled) {
       onSubmit?.(text.trim());
       setText('');
     }
@@ -39,7 +40,9 @@ export function InputCard({ onSubmit }: InputCardProps) {
         onBlur={() => setIsFocused(false)}
         onKeyDown={handleKeyDown}
         placeholder="Add a task..."
-        className="w-full bg-transparent text-[0.9375rem] font-normal text-text-primary placeholder:text-text-muted outline-none"
+        maxLength={500}
+        disabled={disabled}
+        className={`w-full bg-transparent text-[0.9375rem] font-normal text-text-primary placeholder:text-text-muted outline-none ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
     </div>
   );

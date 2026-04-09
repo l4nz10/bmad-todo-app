@@ -23,3 +23,20 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+.task-card {
+  transition: opacity 200ms ease-out, transform 200ms ease-out, box-shadow 150ms ease-out;
+}
+
+@starting-style {
+  .task-card {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-card {
+    transition: none;
+  }
+}
