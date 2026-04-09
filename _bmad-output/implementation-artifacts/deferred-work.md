@@ -38,3 +38,19 @@
 - Rollback no-ops when cache was empty at mutation time — `if (context?.previous)` guard skips rollback when cache is undefined; same pattern as useToggleTodo
 - onSettled invalidation may cause brief flicker — refetch races with optimistic state on slow networks; standard React Query pattern
 - Delete button icon uses text-text-muted color, potentially low contrast on mobile where hover:text-danger never fires — pre-existing in TaskCard.tsx (not modifiable per spec)
+
+## Deferred from: code review of 2-1-undo-toast-on-deletion (2026-04-09)
+
+- Double database connection — `registerTrashRoutes` calls `createDatabase()` independently from `registerTodoRoutes`, opening two SQLite connections to the same file. Pre-existing pattern established in Story 1.1; both route modules create their own connection and register separate `onClose` hooks.
+- No auth/user-scoping on restore endpoint — `PATCH /api/trash/:id/restore` has no ownership check; any caller knowing a UUID can restore any user's deleted todo. Pre-existing: all existing routes (todoRoutes) also lack auth.
+- `toTodo` exposes `userId` in API response — the restore endpoint returns the full `Todo` object including `userId`. Pre-existing: same mapper pattern used in `todoService`.
+
+## Deferred from: code review of 2-2-trash-bin-view-and-restore (2026-04-09)
+
+- Auto-close effect fires before restore feedback — dialog closes immediately via useEffect when trashTodos becomes empty, before user processes the "Task restored" announcement
+- Rapid delete-then-delete overwrites `pendingUndo` silently — only the most recent deletion is undoable; prior deletions within the toast duration are committed
+- `daysRemaining` client/server off-by-one at day boundary — frontend uses `Math.floor` while backend compares ISO strings; can disagree by 1 day at boundaries
+- No permanent purge mechanism — soft-deleted items with `deleted=true` accumulate in the database indefinitely; TTL is only a display filter
+- `useTrashTodos` fetches with default staleTime(0) — triggers unnecessary background refetches on every window focus and component mount
+- `formatDate` in TrashDialog missing year at Dec/Jan boundary — shows "Dec 31" without year context when viewed in early January
+- No optimistic update on trash restore — user sees no immediate visual feedback during network round-trip

@@ -37,6 +37,7 @@
 generated: 2026-04-09
 last_updated: 2026-04-09
 project: bmad
+# Updated by code-review workflow
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -53,9 +54,9 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Deletion Safety & Recovery
-  epic-2: backlog
-  2-1-undo-toast-on-deletion: backlog
-  2-2-trash-bin-view-and-restore: backlog
+  epic-2: in-progress
+  2-1-undo-toast-on-deletion: done
+  2-2-trash-bin-view-and-restore: done
   2-3-automatic-trash-purge: backlog
   epic-2-retrospective: optional
 
