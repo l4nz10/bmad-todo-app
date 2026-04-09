@@ -6,11 +6,13 @@ import { SectionHeader } from './components/SectionHeader.tsx';
 import { useTodos } from './hooks/useTodos.ts';
 import { useCreateTodo } from './hooks/useCreateTodo.ts';
 import { useToggleTodo } from './hooks/useToggleTodo.ts';
+import { useDeleteTodo } from './hooks/useDeleteTodo.ts';
 
 export function App() {
   const { data: todos } = useTodos();
   const createTodo = useCreateTodo();
   const toggleTodo = useToggleTodo();
+  const deleteTodo = useDeleteTodo();
   const [announcement, setAnnouncement] = useState({ text: '', key: 0 });
 
   const activeTodos = todos?.filter((t) => !t.completed) ?? [];
@@ -46,6 +48,21 @@ export function App() {
     );
   };
 
+  const handleDeleteTodo = (id: string) => {
+    if (deleteTodo.isPending) return;
+    deleteTodo.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          announce('Task deleted');
+        },
+        onError: () => {
+          announce('Action failed. Please try again.');
+        },
+      },
+    );
+  };
+
   useEffect(() => {
     if (!announcement.text) return;
     const timer = setTimeout(() => setAnnouncement({ text: '', key: 0 }), 1000);
@@ -63,7 +80,7 @@ export function App() {
               <SectionHeader label="Active" />
               <ul className="flex flex-col gap-4 mt-2">
                 {activeTodos.map((todo) => (
-                  <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} />
+                  <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
                 ))}
               </ul>
             </section>
@@ -73,7 +90,7 @@ export function App() {
               <SectionHeader label="Completed" />
               <ul className="flex flex-col gap-4 mt-2">
                 {completedTodos.map((todo) => (
-                  <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} />
+                  <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
                 ))}
               </ul>
             </section>

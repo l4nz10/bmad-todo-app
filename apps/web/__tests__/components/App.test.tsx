@@ -286,6 +286,124 @@ describe('App', () => {
     });
   });
 
+  it('removes a task when delete button is clicked', async () => {
+    const user = userEvent.setup();
+    let todos = [...mockTodos];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      const url = typeof _input === 'string' ? _input : '';
+      if (init?.method === 'DELETE') {
+        const id = url.split('/').pop()!;
+        const deleted = todos.find((t) => t.id === id)!;
+        todos = todos.filter((t) => t.id !== id);
+        return new Response(JSON.stringify({ data: { ...deleted, deleted: true, deletedAt: new Date().toISOString() } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...todos], meta: { count: todos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    const deleteButton = screen.getByRole('button', { name: /delete "First task"/i });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText('First task')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Second task')).toBeInTheDocument();
+  });
+
+  it('shows empty state after deleting the last task', async () => {
+    const user = userEvent.setup();
+    const singleTodo: Todo[] = [{
+      id: 'uuid-solo',
+      userId: 'default',
+      text: 'Only task',
+      completed: false,
+      deleted: false,
+      deletedAt: null,
+      createdAt: '2026-04-09T10:00:00.000Z',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+    }];
+    let todos = [...singleTodo];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'DELETE') {
+        const deleted = { ...todos[0], deleted: true, deletedAt: new Date().toISOString() };
+        todos = [];
+        return new Response(JSON.stringify({ data: deleted }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...todos], meta: { count: todos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('Only task')).toBeInTheDocument();
+    });
+
+    const deleteButton = screen.getByRole('button', { name: /delete "Only task"/i });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Only task')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText('No tasks yet')).toBeInTheDocument();
+  });
+
+  it('announces error when delete fails', async () => {
+    const user = userEvent.setup();
+    let todos = [...mockTodos];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'DELETE') {
+        return new Response(JSON.stringify({ error: 'Server error', statusCode: 500 }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...todos], meta: { count: todos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    const deleteButton = screen.getByRole('button', { name: /delete "First task"/i });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Action failed. Please try again.')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('First task')).toBeInTheDocument();
+  });
+
   it('has an aria-live region for screen reader announcements', async () => {
     mockFetchWithTodos(mockTodos);
     const { container } = renderWithProviders();
