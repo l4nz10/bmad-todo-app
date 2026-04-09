@@ -25,3 +25,7 @@
 - Tests assert on CSS class names (brittle) — multiple tests check `className.toContain('bg-surface')` etc.; breaks on styling refactor. Pre-existing pattern from Story 1.2.
 - `formatDate` no guard for invalid date string — `new Date(isoString)` could produce Invalid Date if `createdAt` is malformed. Backend validates dates so low risk.
 - Mutate before initial query resolves could flash — optimistic update on undefined cache shows single item then full list on refetch. Edge case requiring specific timing.
+
+## Deferred from: code review of 1-4-complete-reactivate-and-view-completed-tasks (2026-04-09)
+
+- Toggle on freshly-created optimistic todo hits 404 — if user toggles a task before the POST create completes, PATCH fails because server doesn't have the todo yet. Pre-existing race condition between create and toggle mutations; low probability in normal usage.

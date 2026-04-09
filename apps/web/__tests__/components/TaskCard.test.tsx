@@ -15,10 +15,16 @@ const mockTodo: Todo = {
   updatedAt: '2026-04-09T10:00:00.000Z',
 };
 
-function renderTaskCard(props: { todo?: Todo; onDelete?: (id: string) => void } = {}) {
+const completedTodo: Todo = {
+  ...mockTodo,
+  completed: true,
+  updatedAt: '2026-04-09T12:00:00.000Z',
+};
+
+function renderTaskCard(props: { todo?: Todo; onDelete?: (id: string) => void; onToggle?: (id: string) => void } = {}) {
   return render(
     <ul>
-      <TaskCard todo={props.todo ?? mockTodo} onDelete={props.onDelete} />
+      <TaskCard todo={props.todo ?? mockTodo} onDelete={props.onDelete} onToggle={props.onToggle} />
     </ul>,
   );
 }
@@ -40,10 +46,10 @@ describe('TaskCard', () => {
     expect(timeEl).toHaveAttribute('datetime', '2026-04-09T10:00:00.000Z');
   });
 
-  it('renders a disabled checkbox', () => {
+  it('renders an enabled unchecked checkbox for active todo', () => {
     renderTaskCard();
     const checkbox = screen.getByRole('checkbox');
-    expect(checkbox).toBeDisabled();
+    expect(checkbox).toBeEnabled();
     expect(checkbox).not.toBeChecked();
   });
 
@@ -93,5 +99,58 @@ describe('TaskCard', () => {
     renderTaskCard();
     const li = screen.getByRole('listitem');
     expect(li.className).toContain('task-card');
+  });
+
+  it('renders checked checkbox for completed todo', () => {
+    renderTaskCard({ todo: completedTodo });
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeChecked();
+  });
+
+  it('applies opacity-60 to completed todo', () => {
+    renderTaskCard({ todo: completedTodo });
+    const li = screen.getByRole('listitem');
+    expect(li.className).toContain('opacity-60');
+  });
+
+  it('does not apply opacity-60 to active todo', () => {
+    renderTaskCard();
+    const li = screen.getByRole('listitem');
+    expect(li.className).not.toContain('opacity-60');
+  });
+
+  it('applies strikethrough to completed todo text', () => {
+    renderTaskCard({ todo: completedTodo });
+    const textSpan = screen.getByText('Buy groceries');
+    expect(textSpan.className).toContain('line-through');
+    expect(textSpan.className).toContain('text-text-secondary');
+  });
+
+  it('uses primary text color for active todo', () => {
+    renderTaskCard();
+    const textSpan = screen.getByText('Buy groceries');
+    expect(textSpan.className).toContain('text-text-primary');
+    expect(textSpan.className).not.toContain('line-through');
+  });
+
+  it('shows "Mark as complete" aria-label for active todo checkbox', () => {
+    renderTaskCard();
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toHaveAttribute('aria-label', 'Mark "Buy groceries" as complete');
+  });
+
+  it('shows "Mark as active" aria-label for completed todo checkbox', () => {
+    renderTaskCard({ todo: completedTodo });
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toHaveAttribute('aria-label', 'Mark "Buy groceries" as active');
+  });
+
+  it('calls onToggle with todo id when checkbox is clicked', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    renderTaskCard({ onToggle });
+
+    await user.click(screen.getByRole('checkbox'));
+    expect(onToggle).toHaveBeenCalledWith('test-uuid-1234');
   });
 });

@@ -28,6 +28,33 @@ const mockTodos: Todo[] = [
   },
 ];
 
+const mixedTodos: Todo[] = [
+  ...mockTodos,
+  {
+    id: 'uuid-3',
+    userId: 'default',
+    text: 'Done task',
+    completed: true,
+    deleted: false,
+    deletedAt: null,
+    createdAt: '2026-04-09T08:00:00.000Z',
+    updatedAt: '2026-04-09T12:00:00.000Z',
+  },
+];
+
+const onlyCompletedTodos: Todo[] = [
+  {
+    id: 'uuid-4',
+    userId: 'default',
+    text: 'Only completed',
+    completed: true,
+    deleted: false,
+    deletedAt: null,
+    createdAt: '2026-04-09T08:00:00.000Z',
+    updatedAt: '2026-04-09T12:00:00.000Z',
+  },
+];
+
 function renderWithProviders() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -129,8 +156,8 @@ describe('App', () => {
       expect(screen.getByText('First task')).toBeInTheDocument();
     });
 
-    const list = screen.getByRole('list');
-    expect(list.tagName).toBe('UL');
+    const lists = screen.getAllByRole('list');
+    expect(lists[0].tagName).toBe('UL');
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 
@@ -176,5 +203,98 @@ describe('App', () => {
     });
 
     expect(input).toHaveValue('');
+  });
+
+  it('renders completed section when completed todos exist', async () => {
+    mockFetchWithTodos(mixedTodos);
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('Done task')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('heading', { level: 2, name: /completed/i })).toBeInTheDocument();
+  });
+
+  it('does not render completed section when no completed todos exist', async () => {
+    mockFetchWithTodos(mockTodos);
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('heading', { level: 2, name: /completed/i })).not.toBeInTheDocument();
+  });
+
+  it('renders both Active and Completed section headers with mixed todos', async () => {
+    mockFetchWithTodos(mixedTodos);
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /active/i })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('heading', { level: 2, name: /completed/i })).toBeInTheDocument();
+  });
+
+  it('shows empty state only when no tasks at all exist', async () => {
+    mockFetchWithTodos(onlyCompletedTodos);
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('Only completed')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('No tasks yet')).not.toBeInTheDocument();
+  });
+
+  it('toggles a task from active to completed when checkbox is clicked', async () => {
+    const user = userEvent.setup();
+    let todos = [...mockTodos];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      const url = typeof _input === 'string' ? _input : '';
+      if (init?.method === 'PATCH') {
+        const body = JSON.parse(init.body as string) as { completed: boolean };
+        const id = url.split('/').pop()!;
+        todos = todos.map((t) => t.id === id ? { ...t, completed: body.completed, updatedAt: new Date().toISOString() } : t);
+        const updated = todos.find((t) => t.id === id)!;
+        return new Response(JSON.stringify({ data: updated }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...todos], meta: { count: todos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /completed/i })).toBeInTheDocument();
+    });
+  });
+
+  it('has an aria-live region for screen reader announcements', async () => {
+    mockFetchWithTodos(mockTodos);
+    const { container } = renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    const liveRegion = container.querySelector('[aria-live="polite"][role="status"]');
+    expect(liveRegion).toBeInTheDocument();
   });
 });

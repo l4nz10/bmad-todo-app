@@ -3,6 +3,7 @@ import type { Todo } from '@bmad/shared';
 interface TaskCardProps {
   todo: Todo;
   onDelete?: (id: string) => void;
+  onToggle?: (id: string) => void;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -14,17 +15,17 @@ function formatDate(isoString: string): string {
   return dateFormatter.format(new Date(isoString));
 }
 
-export function TaskCard({ todo, onDelete }: TaskCardProps) {
+export function TaskCard({ todo, onDelete, onToggle }: TaskCardProps) {
   return (
-    <li className="task-card bg-surface rounded-xl shadow-sm p-3 flex items-center gap-3 transition-shadow duration-150 ease-out lg:hover:shadow-md">
+    <li className={`task-card bg-surface rounded-xl shadow-sm p-3 flex items-center gap-3 transition-shadow duration-150 ease-out lg:hover:shadow-md ${todo.completed ? 'opacity-60' : ''}`}>
       <input
         type="checkbox"
-        checked={false}
-        disabled
-        aria-label={`Mark "${todo.text}" as complete`}
-        className="h-5 w-5 shrink-0 rounded border-border accent-accent cursor-not-allowed opacity-60"
+        checked={todo.completed}
+        onChange={() => onToggle?.(todo.id)}
+        aria-label={todo.completed ? `Mark "${todo.text}" as active` : `Mark "${todo.text}" as complete`}
+        className="h-5 w-5 shrink-0 rounded border-border accent-accent cursor-pointer"
       />
-      <span className="flex-1 text-[0.9375rem] font-normal text-text-primary min-w-0 break-words">
+      <span className={`flex-1 text-[0.9375rem] font-normal min-w-0 break-words ${todo.completed ? 'text-text-secondary line-through' : 'text-text-primary'}`}>
         {todo.text}
       </span>
       <time
