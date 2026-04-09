@@ -41,6 +41,24 @@ body {
   transition: opacity 150ms ease-out, transform 150ms ease-out;
 }
 
+@keyframes toast-slide-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes toast-slide-out {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(100%); opacity: 0; }
+}
+
+.undo-toast[data-state="open"] {
+  animation: toast-slide-in 200ms ease-out;
+}
+
+.undo-toast[data-state="closed"] {
+  animation: toast-slide-out 150ms ease-in;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .task-card,
   .task-card-exiting {
@@ -48,6 +66,11 @@ body {
   }
 
   .animate-pulse {
+    animation: none;
+  }
+
+  .undo-toast[data-state="open"],
+  .undo-toast[data-state="closed"] {
     animation: none;
   }
 }

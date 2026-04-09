@@ -1,21 +1,33 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
 import { InputCard } from './components/InputCard.tsx';
 import { EmptyState } from './components/EmptyState.tsx';
 import { LoadingState } from './components/LoadingState.tsx';
 import { ErrorState } from './components/ErrorState.tsx';
 import { TaskCard } from './components/TaskCard.tsx';
 import { SectionHeader } from './components/SectionHeader.tsx';
+import { UndoToast } from './components/UndoToast.tsx';
+import { TrashButton } from './components/TrashButton.tsx';
+import { TrashDialog } from './components/TrashDialog.tsx';
 import { useTodos } from './hooks/useTodos.ts';
 import { useCreateTodo } from './hooks/useCreateTodo.ts';
 import { useToggleTodo } from './hooks/useToggleTodo.ts';
 import { useDeleteTodo } from './hooks/useDeleteTodo.ts';
+import { useRestoreTodo } from './hooks/useRestoreTodo.ts';
+import { useTrashTodos } from './hooks/useTrashTodos.ts';
+import type { Todo } from '@bmad/shared';
 
 export function App() {
   const { data: todos, isLoading, isError, refetch } = useTodos();
   const createTodo = useCreateTodo();
   const toggleTodo = useToggleTodo();
   const deleteTodo = useDeleteTodo();
+  const undoRestore = useRestoreTodo();
+  const trashRestore = useRestoreTodo();
+  const { data: trashTodos } = useTrashTodos();
   const [announcement, setAnnouncement] = useState({ text: '', key: 0 });
+  const [pendingUndo, setPendingUndo] = useState<Todo | null>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const trashButtonRef: RefObject<HTMLButtonElement | null> = useRef<HTMLButtonElement>(null);
   const wasLoadingRef = useRef(false);
 
   const activeTodos = todos?.filter((t) => !t.completed) ?? [];
@@ -53,10 +65,14 @@ export function App() {
 
   const handleDeleteTodo = (id: string) => {
     if (deleteTodo.isPending) return;
+    const todoToDelete = todos?.find((t) => t.id === id);
     deleteTodo.mutate(
       { id },
       {
         onSuccess: () => {
+          if (todoToDelete) {
+            setPendingUndo(todoToDelete);
+          }
           announce('Task deleted');
         },
         onError: () => {
@@ -65,6 +81,48 @@ export function App() {
       },
     );
   };
+
+  const handleUndo = () => {
+    if (!pendingUndo || undoRestore.isPending) return;
+    const todoId = pendingUndo.id;
+    undoRestore.mutate(
+      { id: todoId },
+      {
+        onSuccess: () => {
+          setPendingUndo(null);
+          announce('Task restored');
+        },
+        onError: () => {
+          announce('Action failed. Please try again.');
+        },
+      },
+    );
+  };
+
+  const handleToastDismiss = () => {
+    setPendingUndo(null);
+  };
+
+  const handleTrashRestore = (id: string) => {
+    if (trashRestore.isPending) return;
+    trashRestore.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          announce('Task restored');
+        },
+        onError: () => {
+          announce('Action failed. Please try again.');
+        },
+      },
+    );
+  };
+
+  useEffect(() => {
+    if (trashOpen && trashTodos && trashTodos.length === 0) {
+      setTrashOpen(false);
+    }
+  }, [trashOpen, trashTodos]);
 
   useEffect(() => {
     if (isLoading) {
@@ -123,6 +181,16 @@ export function App() {
           {announcement.text}
         </div>
       </main>
+      <div className="sm:mx-auto sm:max-w-[640px] px-4">
+        <TrashButton ref={trashButtonRef} count={trashTodos?.length ?? 0} onClick={() => setTrashOpen(true)} />
+      </div>
+      <TrashDialog open={trashOpen} onOpenChange={(open) => {
+        setTrashOpen(open);
+        if (!open) {
+          requestAnimationFrame(() => trashButtonRef.current?.focus());
+        }
+      }} trashedTodos={trashTodos ?? []} onRestore={handleTrashRestore} />
+      <UndoToast deletedTodo={pendingUndo} onUndo={handleUndo} onDismiss={handleToastDismiss} />
     </div>
   );
 }

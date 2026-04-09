@@ -1,9 +1,16 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from '../../src/App.tsx';
 import type { Todo, ApiResponse } from '@bmad/shared';
+
+// jsdom doesn't support pointer capture — stub for Radix Toast
+beforeAll(() => {
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.setPointerCapture = () => {};
+  Element.prototype.releasePointerCapture = () => {};
+});
 
 const mockTodos: Todo[] = [
   {
@@ -70,14 +77,22 @@ function renderWithProviders() {
   ) };
 }
 
-function mockFetchWithTodos(todos: Todo[]) {
-  const response: ApiResponse<Todo[]> = { data: todos, meta: { count: todos.length } };
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify(response), {
+function mockFetchWithTodos(todos: Todo[], trashedTodos: Todo[] = []) {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = typeof input === 'string' ? input : '';
+    if (url.includes('/api/trash')) {
+      const response: ApiResponse<Todo[]> = { data: trashedTodos, meta: { count: trashedTodos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const response: ApiResponse<Todo[]> = { data: todos, meta: { count: todos.length } };
+    return new Response(JSON.stringify(response), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-    }),
-  );
+    });
+  });
 }
 
 afterEach(() => {
@@ -541,5 +556,259 @@ describe('App', () => {
 
     const liveRegion = container.querySelector('[aria-live="polite"][role="status"]');
     expect(liveRegion).toBeInTheDocument();
+  });
+
+  it('shows undo toast after deleting a task', async () => {
+    const user = userEvent.setup();
+    let todos = [...mockTodos];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'DELETE') {
+        const url = typeof _input === 'string' ? _input : '';
+        const id = url.split('/').pop()!;
+        const deleted = todos.find((t) => t.id === id)!;
+        todos = todos.filter((t) => t.id !== id);
+        return new Response(JSON.stringify({ data: { ...deleted, deleted: true, deletedAt: new Date().toISOString() } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...todos], meta: { count: todos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /delete "First task"/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Task deleted')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument();
+  });
+
+  it('restores task when undo is clicked', async () => {
+    const user = userEvent.setup();
+    const originalTodos = [...mockTodos];
+    let todos = [...mockTodos];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      const url = typeof _input === 'string' ? _input : '';
+      if (init?.method === 'DELETE') {
+        const id = url.split('/').pop()!;
+        const deleted = todos.find((t) => t.id === id)!;
+        todos = todos.filter((t) => t.id !== id);
+        return new Response(JSON.stringify({ data: { ...deleted, deleted: true, deletedAt: new Date().toISOString() } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (init?.method === 'PATCH' && url.includes('/trash/') && url.includes('/restore')) {
+        todos = [...originalTodos];
+        const id = url.split('/trash/')[1].split('/restore')[0];
+        const restored = originalTodos.find((t) => t.id === id)!;
+        return new Response(JSON.stringify({ data: restored }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...todos], meta: { count: todos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /delete "First task"/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Task deleted')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /undo/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+  });
+
+  it('announces "Task restored" after undo', async () => {
+    const user = userEvent.setup();
+    let todos = [...mockTodos];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      const url = typeof _input === 'string' ? _input : '';
+      if (init?.method === 'DELETE') {
+        const id = url.split('/').pop()!;
+        const deleted = todos.find((t) => t.id === id)!;
+        todos = todos.filter((t) => t.id !== id);
+        return new Response(JSON.stringify({ data: { ...deleted, deleted: true, deletedAt: new Date().toISOString() } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (init?.method === 'PATCH' && url.includes('/trash/') && url.includes('/restore')) {
+        todos = [...mockTodos];
+        const restored = mockTodos[0];
+        return new Response(JSON.stringify({ data: restored }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...todos], meta: { count: todos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    const { container } = renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /delete "First task"/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Task deleted')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /undo/i }));
+
+    await waitFor(() => {
+      const liveRegion = container.querySelector('[aria-live="polite"][role="status"]');
+      expect(liveRegion).toHaveTextContent('Task restored');
+    });
+  });
+
+  it('shows trash button with count when trashed items exist', async () => {
+    const trashedTodos: Todo[] = [{
+      id: 'trash-1',
+      userId: 'default',
+      text: 'Trashed task',
+      completed: false,
+      deleted: true,
+      deletedAt: new Date().toISOString(),
+      createdAt: '2026-04-09T10:00:00.000Z',
+      updatedAt: new Date().toISOString(),
+    }];
+
+    mockFetchWithTodos(mockTodos, trashedTodos);
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /trash, 1 item/i })).toBeInTheDocument();
+    });
+  });
+
+  it('hides trash button when no trashed items', async () => {
+    mockFetchWithTodos(mockTodos);
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: /trash/i })).not.toBeInTheDocument();
+  });
+
+  it('opens trash dialog when trash button is clicked', async () => {
+    const user = userEvent.setup();
+    const trashedTodos: Todo[] = [{
+      id: 'trash-1',
+      userId: 'default',
+      text: 'Trashed task',
+      completed: false,
+      deleted: true,
+      deletedAt: new Date().toISOString(),
+      createdAt: '2026-04-09T10:00:00.000Z',
+      updatedAt: new Date().toISOString(),
+    }];
+
+    mockFetchWithTodos(mockTodos, trashedTodos);
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /trash, 1 item/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /trash, 1 item/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText('Trashed task')).toBeInTheDocument();
+    });
+  });
+
+  it('restores task from trash dialog', async () => {
+    const user = userEvent.setup();
+    let trashedTodos: Todo[] = [{
+      id: 'trash-1',
+      userId: 'default',
+      text: 'Trashed task',
+      completed: false,
+      deleted: true,
+      deletedAt: new Date().toISOString(),
+      createdAt: '2026-04-09T10:00:00.000Z',
+      updatedAt: new Date().toISOString(),
+    }];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : '';
+      if (init?.method === 'PATCH' && url.includes('/trash/') && url.includes('/restore')) {
+        trashedTodos = [];
+        const restored = { ...trashedTodos[0], deleted: false, deletedAt: null };
+        return new Response(JSON.stringify({ data: restored }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (url.includes('/api/trash')) {
+        const response: ApiResponse<Todo[]> = { data: [...trashedTodos], meta: { count: trashedTodos.length } };
+        return new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...mockTodos], meta: { count: mockTodos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /trash, 1 item/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /trash, 1 item/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /restore "Trashed task"/i }));
+
+    await waitFor(() => {
+      const liveRegion = document.querySelector('[aria-live="polite"][role="status"]');
+      expect(liveRegion).toHaveTextContent('Task restored');
+    });
   });
 });
