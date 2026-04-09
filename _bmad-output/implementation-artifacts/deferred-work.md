@@ -29,3 +29,12 @@
 ## Deferred from: code review of 1-4-complete-reactivate-and-view-completed-tasks (2026-04-09)
 
 - Toggle on freshly-created optimistic todo hits 404 — if user toggles a task before the POST create completes, PATCH fails because server doesn't have the todo yet. Pre-existing race condition between create and toggle mutations; low probability in normal usage.
+
+## Deferred from: code review of 1-5-delete-tasks-with-inline-removal (2026-04-09)
+
+- isPending blocks all concurrent deletes globally — single shared mutation instance serializes all delete operations; same pattern as useToggleTodo from Story 1.4
+- Concurrent delete + toggle produces split-brain optimistic state — two mutations snapshot cache independently; whichever settles last may restore stale data
+- apiDelete calls .json() unconditionally — will throw on 204 No Content; pre-existing in apiClient.ts
+- Rollback no-ops when cache was empty at mutation time — `if (context?.previous)` guard skips rollback when cache is undefined; same pattern as useToggleTodo
+- onSettled invalidation may cause brief flicker — refetch races with optimistic state on slow networks; standard React Query pattern
+- Delete button icon uses text-text-muted color, potentially low contrast on mobile where hover:text-danger never fires — pre-existing in TaskCard.tsx (not modifiable per spec)
