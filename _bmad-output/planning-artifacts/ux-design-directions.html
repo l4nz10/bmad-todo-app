@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bmad - Design Direction Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #111; color: #fff; }
+
+  /* Navigation */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #111; border-bottom: 1px solid #333; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .nav-title { font-size: 14px; font-weight: 600; color: #999; margin-right: 12px; }
+  .nav-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #444; background: transparent; color: #ccc; font-size: 13px; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.15s; }
+  .nav-btn:hover { background: #222; color: #fff; }
+  .nav-btn.active { background: #fff; color: #111; border-color: #fff; }
+
+  /* Mockup container */
+  .mockup { display: none; min-height: 100vh; padding: 80px 24px 40px; justify-content: center; }
+  .mockup.visible { display: flex; }
+  .mockup-inner { width: 100%; max-width: 640px; }
+
+  /* Direction labels */
+  .direction-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #666; margin-bottom: 8px; }
+  .direction-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .direction-desc { font-size: 13px; color: #999; margin-bottom: 24px; line-height: 1.5; }
+
+  /* ===== DIRECTION A: Clean Minimal ===== */
+  .da { background: #FAFAF9; color: #1C1C1C; }
+  .da .direction-label, .da .direction-title, .da .direction-desc { color: #1C1C1C; }
+  .da .direction-desc { color: #6B7280; }
+
+  .da .app-header { margin-bottom: 24px; }
+  .da .app-title { font-size: 20px; font-weight: 600; color: #1C1C1C; }
+
+  .da .input-area { display: flex; gap: 8px; margin-bottom: 24px; align-items: center; }
+  .da .task-input { flex: 1; padding: 10px 12px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 15px; font-family: 'Inter', sans-serif; background: #fff; color: #1C1C1C; outline: none; }
+  .da .task-input::placeholder { color: #9CA3AF; }
+  .da .draft-btn { padding: 8px 12px; border: 1px solid #4B7BF5; border-radius: 8px; background: transparent; color: #4B7BF5; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
+
+  .da .section-label { font-size: 13px; font-weight: 600; color: #6B7280; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .da .task-list { margin-bottom: 24px; }
+  .da .task-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid #E5E7EB; gap: 10px; }
+  .da .task-item:last-child { border-bottom: none; }
+  .da .checkbox { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #D1D5DB; cursor: pointer; flex-shrink: 0; }
+  .da .checkbox.checked { background: #22C55E; border-color: #22C55E; }
+  .da .task-text { flex: 1; font-size: 15px; }
+  .da .task-text.completed { color: #6B7280; text-decoration: line-through; }
+  .da .task-meta { font-size: 12px; color: #9CA3AF; }
+  .da .delete-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; color: #9CA3AF; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .da .delete-btn:hover { background: #FEE2E2; color: #EF4444; }
+
+  .da .completed-section { opacity: 0.7; }
+  .da .trash-link { font-size: 12px; color: #9CA3AF; text-align: center; margin-top: 24px; cursor: pointer; }
+  .da .trash-link:hover { color: #6B7280; }
+
+  .da .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1C1C1C; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .da .toast-undo { color: #4B7BF5; font-weight: 500; cursor: pointer; }
+
+  /* ===== DIRECTION B: Card-Based ===== */
+  .db { background: #F3F4F6; color: #1C1C1C; }
+  .db .direction-label, .db .direction-title, .db .direction-desc { color: #1C1C1C; }
+  .db .direction-desc { color: #6B7280; }
+
+  .db .app-header { margin-bottom: 24px; }
+  .db .app-title { font-size: 20px; font-weight: 600; color: #1C1C1C; }
+
+  .db .input-area { margin-bottom: 24px; }
+  .db .input-card { background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; gap: 8px; align-items: center; }
+  .db .task-input { flex: 1; padding: 8px; border: none; font-size: 15px; font-family: 'Inter', sans-serif; background: transparent; color: #1C1C1C; outline: none; }
+  .db .task-input::placeholder { color: #9CA3AF; }
+  .db .draft-btn { padding: 6px 10px; border: none; border-radius: 6px; background: #EEF2FF; color: #4B7BF5; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
+
+  .db .section-label { font-size: 13px; font-weight: 600; color: #6B7280; margin-bottom: 8px; }
+  .db .task-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+  .db .task-card { display: flex; align-items: center; padding: 12px; background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); gap: 10px; transition: box-shadow 0.15s; }
+  .db .task-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .db .checkbox { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #D1D5DB; cursor: pointer; flex-shrink: 0; }
+  .db .checkbox.checked { background: #22C55E; border-color: #22C55E; }
+  .db .task-text { flex: 1; font-size: 15px; }
+  .db .task-text.completed { color: #9CA3AF; text-decoration: line-through; }
+  .db .task-meta { font-size: 12px; color: #9CA3AF; }
+  .db .delete-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; color: #D1D5DB; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .db .delete-btn:hover { background: #FEE2E2; color: #EF4444; }
+
+  .db .completed-section .task-card { opacity: 0.6; }
+  .db .trash-link { font-size: 12px; color: #9CA3AF; text-align: center; margin-top: 24px; cursor: pointer; }
+
+  /* ===== DIRECTION C: Border Accent ===== */
+  .dc { background: #FFFFFF; color: #1C1C1C; }
+  .dc .direction-label, .dc .direction-title, .dc .direction-desc { color: #1C1C1C; }
+  .dc .direction-desc { color: #6B7280; }
+
+  .dc .app-header { margin-bottom: 24px; border-left: 3px solid #4B7BF5; padding-left: 12px; }
+  .dc .app-title { font-size: 20px; font-weight: 600; color: #1C1C1C; }
+
+  .dc .input-area { display: flex; gap: 8px; margin-bottom: 24px; }
+  .dc .task-input { flex: 1; padding: 10px 12px; border: none; border-bottom: 2px solid #E5E7EB; font-size: 15px; font-family: 'Inter', sans-serif; background: transparent; color: #1C1C1C; outline: none; transition: border-color 0.15s; }
+  .dc .task-input:focus { border-bottom-color: #4B7BF5; }
+  .dc .task-input::placeholder { color: #9CA3AF; }
+  .dc .draft-btn { padding: 8px 12px; border: none; border-bottom: 2px solid #4B7BF5; background: transparent; color: #4B7BF5; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
+
+  .dc .section-label { font-size: 13px; font-weight: 600; color: #4B7BF5; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .dc .task-list { margin-bottom: 24px; }
+  .dc .task-item { display: flex; align-items: center; padding: 10px 0; padding-left: 12px; border-left: 2px solid transparent; gap: 10px; transition: border-color 0.15s; }
+  .dc .task-item:hover { border-left-color: #4B7BF5; }
+  .dc .checkbox { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #D1D5DB; cursor: pointer; flex-shrink: 0; }
+  .dc .checkbox.checked { background: #22C55E; border-color: #22C55E; }
+  .dc .task-text { flex: 1; font-size: 15px; }
+  .dc .task-text.completed { color: #9CA3AF; text-decoration: line-through; }
+  .dc .task-meta { font-size: 12px; color: #9CA3AF; }
+  .dc .delete-btn { width: 28px; height: 28px; border-radius: 4px; border: none; background: transparent; color: #D1D5DB; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .dc .delete-btn:hover { color: #EF4444; }
+
+  .dc .completed-section { opacity: 0.6; }
+  .dc .trash-link { font-size: 12px; color: #9CA3AF; margin-top: 24px; cursor: pointer; }
+
+  /* ===== DIRECTION D: Dark Mode ===== */
+  .dd { background: #0F0F0F; color: #E5E5E5; }
+  .dd .direction-label { color: #666; }
+  .dd .direction-title { color: #E5E5E5; }
+  .dd .direction-desc { color: #888; }
+
+  .dd .app-header { margin-bottom: 24px; }
+  .dd .app-title { font-size: 20px; font-weight: 600; color: #E5E5E5; }
+
+  .dd .input-area { display: flex; gap: 8px; margin-bottom: 24px; }
+  .dd .task-input { flex: 1; padding: 10px 12px; border: 1px solid #2A2A2A; border-radius: 8px; font-size: 15px; font-family: 'Inter', sans-serif; background: #1A1A1A; color: #E5E5E5; outline: none; }
+  .dd .task-input:focus { border-color: #4B7BF5; }
+  .dd .task-input::placeholder { color: #555; }
+  .dd .draft-btn { padding: 8px 12px; border: 1px solid #4B7BF5; border-radius: 8px; background: rgba(75,123,245,0.1); color: #6B9BFF; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
+
+  .dd .section-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .dd .task-list { margin-bottom: 24px; }
+  .dd .task-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid #1A1A1A; gap: 10px; }
+  .dd .task-item:last-child { border-bottom: none; }
+  .dd .checkbox { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #444; cursor: pointer; flex-shrink: 0; }
+  .dd .checkbox.checked { background: #22C55E; border-color: #22C55E; }
+  .dd .task-text { flex: 1; font-size: 15px; color: #E5E5E5; }
+  .dd .task-text.completed { color: #555; text-decoration: line-through; }
+  .dd .task-meta { font-size: 12px; color: #444; }
+  .dd .delete-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; color: #444; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .dd .delete-btn:hover { background: rgba(239,68,68,0.1); color: #EF4444; }
+
+  .dd .completed-section { opacity: 0.5; }
+  .dd .trash-link { font-size: 12px; color: #444; text-align: center; margin-top: 24px; cursor: pointer; }
+
+  /* ===== DIRECTION E: Teal Accent ===== */
+  .de { background: #FAFAF9; color: #1C1C1C; }
+  .de .direction-label, .de .direction-title, .de .direction-desc { color: #1C1C1C; }
+  .de .direction-desc { color: #6B7280; }
+
+  .de .app-header { margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+  .de .app-title { font-size: 20px; font-weight: 600; color: #1C1C1C; }
+  .de .app-dot { width: 8px; height: 8px; border-radius: 50%; background: #0D9488; }
+
+  .de .input-area { display: flex; gap: 8px; margin-bottom: 24px; }
+  .de .task-input { flex: 1; padding: 10px 12px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 15px; font-family: 'Inter', sans-serif; background: #fff; color: #1C1C1C; outline: none; transition: border-color 0.15s; }
+  .de .task-input:focus { border-color: #0D9488; }
+  .de .task-input::placeholder { color: #9CA3AF; }
+  .de .draft-btn { padding: 8px 12px; border: 1px solid #0D9488; border-radius: 8px; background: transparent; color: #0D9488; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
+
+  .de .section-label { font-size: 13px; font-weight: 600; color: #0D9488; margin-bottom: 8px; }
+  .de .task-list { margin-bottom: 24px; }
+  .de .task-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid #E5E7EB; gap: 10px; }
+  .de .task-item:last-child { border-bottom: none; }
+  .de .checkbox { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #D1D5DB; cursor: pointer; flex-shrink: 0; }
+  .de .checkbox.checked { background: #0D9488; border-color: #0D9488; }
+  .de .task-text { flex: 1; font-size: 15px; }
+  .de .task-text.completed { color: #6B7280; text-decoration: line-through; }
+  .de .task-meta { font-size: 12px; color: #9CA3AF; }
+  .de .delete-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; color: #9CA3AF; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .de .delete-btn:hover { background: #FEE2E2; color: #EF4444; }
+
+  .de .completed-section { opacity: 0.7; }
+  .de .trash-link { font-size: 12px; color: #9CA3AF; text-align: center; margin-top: 24px; cursor: pointer; }
+
+  /* ===== DIRECTION F: Ultra Minimal ===== */
+  .df { background: #FFFFFF; color: #1C1C1C; }
+  .df .direction-label, .df .direction-title, .df .direction-desc { color: #1C1C1C; }
+  .df .direction-desc { color: #6B7280; }
+
+  .df .app-header { margin-bottom: 32px; }
+  .df .app-title { font-size: 15px; font-weight: 600; color: #9CA3AF; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .df .input-area { margin-bottom: 32px; }
+  .df .task-input { width: 100%; padding: 0 0 8px 0; border: none; border-bottom: 1px solid #E5E7EB; font-size: 15px; font-family: 'Inter', sans-serif; background: transparent; color: #1C1C1C; outline: none; }
+  .df .task-input:focus { border-bottom-color: #1C1C1C; }
+  .df .task-input::placeholder { color: #D1D5DB; }
+  .df .draft-hint { font-size: 12px; color: #9CA3AF; margin-top: 6px; cursor: pointer; }
+  .df .draft-hint:hover { color: #6B7280; }
+
+  .df .section-label { font-size: 11px; font-weight: 600; color: #9CA3AF; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .df .task-list { margin-bottom: 32px; }
+  .df .task-item { display: flex; align-items: center; padding: 8px 0; gap: 12px; }
+  .df .checkbox { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #D1D5DB; cursor: pointer; flex-shrink: 0; }
+  .df .checkbox.checked { background: #1C1C1C; border-color: #1C1C1C; }
+  .df .task-text { flex: 1; font-size: 15px; }
+  .df .task-text.completed { color: #D1D5DB; text-decoration: line-through; }
+  .df .delete-btn { opacity: 0; width: 20px; height: 20px; border: none; background: transparent; color: #D1D5DB; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s; }
+  .df .task-item:hover .delete-btn { opacity: 1; }
+  .df .delete-btn:hover { color: #EF4444; }
+
+  .df .completed-section { opacity: 0.5; }
+  .df .trash-link { font-size: 11px; color: #D1D5DB; margin-top: 32px; cursor: pointer; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ===== Notification bars ===== */
+  .network-bar { background: #FEF3C7; color: #92400E; padding: 8px 16px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .network-bar.dark { background: #422006; color: #FCD34D; }
+  .network-dot { width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 48px 24px; color: #9CA3AF; }
+  .empty-state p { font-size: 15px; margin-bottom: 4px; }
+  .empty-state .hint { font-size: 13px; color: #D1D5DB; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-title">bmad Design Directions</span>
+  <button class="nav-btn active" onclick="show('a')">A: Clean Minimal</button>
+  <button class="nav-btn" onclick="show('b')">B: Card-Based</button>
+  <button class="nav-btn" onclick="show('c')">C: Border Accent</button>
+  <button class="nav-btn" onclick="show('d')">D: Dark Mode</button>
+  <button class="nav-btn" onclick="show('e')">E: Teal Accent</button>
+  <button class="nav-btn" onclick="show('f')">F: Ultra Minimal</button>
+</nav>
+
+<!-- DIRECTION A: Clean Minimal -->
+<div id="mockup-a" class="mockup da visible">
+<div class="mockup-inner">
+  <div class="direction-label">Direction A</div>
+  <div class="direction-title">Clean Minimal</div>
+  <div class="direction-desc">Thin borders, round checkboxes, blue accent. Gmail-inspired undo toast. Compact rows with subtle dividers.</div>
+
+  <div class="app-header"><div class="app-title">bmad</div></div>
+
+  <div class="input-area">
+    <input class="task-input" placeholder="Add a task..." />
+    <button class="draft-btn">Resume draft</button>
+  </div>
+
+  <div class="section-label">Active</div>
+  <div class="task-list">
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Review Q3 budget proposal</span><span class="task-meta">2h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Email professor about extension</span><span class="task-meta">5h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Buy groceries for dinner</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+  </div>
+
+  <div class="completed-section">
+    <div class="section-label">Completed</div>
+    <div class="task-list">
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Schedule team standup</span><span class="task-meta">3h ago</span><button class="delete-btn">&times;</button></div>
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Fix login bug</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+    </div>
+  </div>
+
+  <div class="trash-link">Trash (2 items)</div>
+
+  <div class="toast">
+    <span>Task deleted</span>
+    <span class="toast-undo">Undo</span>
+  </div>
+</div>
+</div>
+
+<!-- DIRECTION B: Card-Based -->
+<div id="mockup-b" class="mockup db">
+<div class="mockup-inner">
+  <div class="direction-label">Direction B</div>
+  <div class="direction-title">Card-Based</div>
+  <div class="direction-desc">Each task is a subtle card with soft shadow. Input area is also a card. Rounded corners, gentle elevation. Feels tactile.</div>
+
+  <div class="app-header"><div class="app-title">bmad</div></div>
+
+  <div class="input-area">
+    <div class="input-card">
+      <input class="task-input" placeholder="Add a task..." />
+      <button class="draft-btn">Resume draft</button>
+    </div>
+  </div>
+
+  <div class="section-label">Active</div>
+  <div class="task-list">
+    <div class="task-card"><div class="checkbox"></div><span class="task-text">Review Q3 budget proposal</span><span class="task-meta">2h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-card"><div class="checkbox"></div><span class="task-text">Email professor about extension</span><span class="task-meta">5h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-card"><div class="checkbox"></div><span class="task-text">Buy groceries for dinner</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+  </div>
+
+  <div class="completed-section">
+    <div class="section-label">Completed</div>
+    <div class="task-list">
+      <div class="task-card"><div class="checkbox checked"></div><span class="task-text completed">Schedule team standup</span><span class="task-meta">3h ago</span><button class="delete-btn">&times;</button></div>
+      <div class="task-card"><div class="checkbox checked"></div><span class="task-text completed">Fix login bug</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+    </div>
+  </div>
+
+  <div class="trash-link">Trash (2 items)</div>
+</div>
+</div>
+
+<!-- DIRECTION C: Border Accent -->
+<div id="mockup-c" class="mockup dc">
+<div class="mockup-inner">
+  <div class="direction-label">Direction C</div>
+  <div class="direction-title">Border Accent</div>
+  <div class="direction-desc">Left border accents on hover. Underline input. Square checkboxes. Accent color used as structural element, not fill. Architectural feel.</div>
+
+  <div class="app-header"><div class="app-title">bmad</div></div>
+
+  <div class="input-area">
+    <input class="task-input" placeholder="Add a task..." />
+    <button class="draft-btn">Resume draft</button>
+  </div>
+
+  <div class="network-bar"><div class="network-dot"></div> Connection lost — changes will sync when back online</div>
+
+  <div class="section-label">Active</div>
+  <div class="task-list">
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Review Q3 budget proposal</span><span class="task-meta">2h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Email professor about extension</span><span class="task-meta">5h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Buy groceries for dinner</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+  </div>
+
+  <div class="completed-section">
+    <div class="section-label">Completed</div>
+    <div class="task-list">
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Schedule team standup</span><span class="task-meta">3h ago</span><button class="delete-btn">&times;</button></div>
+    </div>
+  </div>
+
+  <div class="trash-link">View trash</div>
+</div>
+</div>
+
+<!-- DIRECTION D: Dark Mode -->
+<div id="mockup-d" class="mockup dd">
+<div class="mockup-inner">
+  <div class="direction-label">Direction D</div>
+  <div class="direction-title">Dark Mode</div>
+  <div class="direction-desc">Dark background, muted tones, blue accent. Same compact layout. Demonstrates the app works beautifully in dark theme. Good for late-night use.</div>
+
+  <div class="app-header"><div class="app-title">bmad</div></div>
+
+  <div class="input-area">
+    <input class="task-input" placeholder="Add a task..." />
+    <button class="draft-btn">Resume draft</button>
+  </div>
+
+  <div class="network-bar dark"><div class="network-dot"></div> Connection lost — changes will sync when back online</div>
+
+  <div class="section-label">Active</div>
+  <div class="task-list">
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Review Q3 budget proposal</span><span class="task-meta">2h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Email professor about extension</span><span class="task-meta">5h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Buy groceries for dinner</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+  </div>
+
+  <div class="completed-section">
+    <div class="section-label">Completed</div>
+    <div class="task-list">
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Schedule team standup</span><span class="task-meta">3h ago</span><button class="delete-btn">&times;</button></div>
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Fix login bug</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+    </div>
+  </div>
+
+  <div class="trash-link">Trash (2 items)</div>
+</div>
+</div>
+
+<!-- DIRECTION E: Teal Accent -->
+<div id="mockup-e" class="mockup de">
+<div class="mockup-inner">
+  <div class="direction-label">Direction E</div>
+  <div class="direction-title">Teal Accent</div>
+  <div class="direction-desc">Same clean structure as A, but with teal (#0D9488) as accent. Warmer, more organic feel. Section labels use accent color. Subtle brand dot next to title.</div>
+
+  <div class="app-header"><div class="app-dot"></div><div class="app-title">bmad</div></div>
+
+  <div class="input-area">
+    <input class="task-input" placeholder="Add a task..." />
+    <button class="draft-btn">Resume draft</button>
+  </div>
+
+  <div class="section-label">Active</div>
+  <div class="task-list">
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Review Q3 budget proposal</span><span class="task-meta">2h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Email professor about extension</span><span class="task-meta">5h ago</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Buy groceries for dinner</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+  </div>
+
+  <div class="completed-section">
+    <div class="section-label">Completed</div>
+    <div class="task-list">
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Schedule team standup</span><span class="task-meta">3h ago</span><button class="delete-btn">&times;</button></div>
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Fix login bug</span><span class="task-meta">1d ago</span><button class="delete-btn">&times;</button></div>
+    </div>
+  </div>
+
+  <div class="trash-link">Trash (2 items)</div>
+</div>
+</div>
+
+<!-- DIRECTION F: Ultra Minimal -->
+<div id="mockup-f" class="mockup df">
+<div class="mockup-inner">
+  <div class="direction-label">Direction F</div>
+  <div class="direction-title">Ultra Minimal</div>
+  <div class="direction-desc">Maximum reduction. No borders on tasks, just spacing. Underline input. Monochrome checkboxes. Delete buttons hidden until hover. The content IS the interface.</div>
+
+  <div class="app-header"><div class="app-title">bmad</div></div>
+
+  <div class="input-area">
+    <input class="task-input" placeholder="What needs to be done?" />
+    <div class="draft-hint">Resume draft: "Email professor about..."</div>
+  </div>
+
+  <div class="section-label">Active</div>
+  <div class="task-list">
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Review Q3 budget proposal</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Email professor about extension</span><button class="delete-btn">&times;</button></div>
+    <div class="task-item"><div class="checkbox"></div><span class="task-text">Buy groceries for dinner</span><button class="delete-btn">&times;</button></div>
+  </div>
+
+  <div class="completed-section">
+    <div class="section-label">Done</div>
+    <div class="task-list">
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Schedule team standup</span><button class="delete-btn">&times;</button></div>
+      <div class="task-item"><div class="checkbox checked"></div><span class="task-text completed">Fix login bug</span><button class="delete-btn">&times;</button></div>
+    </div>
+  </div>
+
+  <div class="trash-link">Trash</div>
+</div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.mockup').forEach(m => m.classList.remove('visible'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mockup-' + id).classList.add('visible');
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>
