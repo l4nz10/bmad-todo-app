@@ -19,3 +19,9 @@
 - SQLite not closed on process exit — pre-existing from Story 1.1; no shutdown hook calls sqlite.close()
 - migrate() called on every createDatabase invocation — pre-existing from Story 1.1; risk of lock contention if called concurrently
 - apiClient includes mutation functions (apiPost/apiPatch/apiDelete) beyond story 1.2 scope — fetch wrappers not hooks; pragmatic to keep, validate fit in Story 1.3
+
+## Deferred from: code review of 1-3-create-and-view-active-tasks (2026-04-09)
+
+- Tests assert on CSS class names (brittle) — multiple tests check `className.toContain('bg-surface')` etc.; breaks on styling refactor. Pre-existing pattern from Story 1.2.
+- `formatDate` no guard for invalid date string — `new Date(isoString)` could produce Invalid Date if `createdAt` is malformed. Backend validates dates so low risk.
+- Mutate before initial query resolves could flash — optimistic update on undefined cache shows single item then full list on refetch. Edge case requiring specific timing.
