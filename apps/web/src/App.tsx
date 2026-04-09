@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { InputCard } from './components/InputCard.tsx';
 import { EmptyState } from './components/EmptyState.tsx';
+import { LoadingState } from './components/LoadingState.tsx';
+import { ErrorState } from './components/ErrorState.tsx';
 import { TaskCard } from './components/TaskCard.tsx';
 import { SectionHeader } from './components/SectionHeader.tsx';
 import { useTodos } from './hooks/useTodos.ts';
@@ -9,11 +11,12 @@ import { useToggleTodo } from './hooks/useToggleTodo.ts';
 import { useDeleteTodo } from './hooks/useDeleteTodo.ts';
 
 export function App() {
-  const { data: todos } = useTodos();
+  const { data: todos, isLoading, isError, refetch } = useTodos();
   const createTodo = useCreateTodo();
   const toggleTodo = useToggleTodo();
   const deleteTodo = useDeleteTodo();
   const [announcement, setAnnouncement] = useState({ text: '', key: 0 });
+  const wasLoadingRef = useRef(false);
 
   const activeTodos = todos?.filter((t) => !t.completed) ?? [];
   const completedTodos = todos?.filter((t) => t.completed) ?? [];
@@ -64,6 +67,19 @@ export function App() {
   };
 
   useEffect(() => {
+    if (isLoading) {
+      wasLoadingRef.current = true;
+    } else if (wasLoadingRef.current) {
+      wasLoadingRef.current = false;
+      if (isError) {
+        announce("Couldn't load your tasks");
+      } else if (todos) {
+        announce('Tasks loaded');
+      }
+    }
+  }, [isLoading, isError, todos, announce]);
+
+  useEffect(() => {
     if (!announcement.text) return;
     const timer = setTimeout(() => setAnnouncement({ text: '', key: 0 }), 1000);
     return () => clearTimeout(timer);
@@ -75,27 +91,33 @@ export function App() {
         <h1 className="text-xl font-semibold text-text-primary mb-6">bmad</h1>
         <div className="flex flex-col gap-4">
           <InputCard onSubmit={handleCreateTodo} disabled={createTodo.isPending} />
-          {activeTodos.length > 0 && (
-            <section>
-              <SectionHeader label="Active" />
-              <ul className="flex flex-col gap-4 mt-2">
-                {activeTodos.map((todo) => (
-                  <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
-                ))}
-              </ul>
-            </section>
+          {isLoading && <LoadingState />}
+          {isError && <ErrorState onRetry={refetch} />}
+          {!isLoading && !isError && (
+            <>
+              {activeTodos.length > 0 && (
+                <section>
+                  <SectionHeader label="Active" />
+                  <ul className="flex flex-col gap-4 mt-2">
+                    {activeTodos.map((todo) => (
+                      <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {completedTodos.length > 0 && (
+                <section>
+                  <SectionHeader label="Completed" />
+                  <ul className="flex flex-col gap-4 mt-2">
+                    {completedTodos.map((todo) => (
+                      <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {isEmpty && <EmptyState />}
+            </>
           )}
-          {completedTodos.length > 0 && (
-            <section>
-              <SectionHeader label="Completed" />
-              <ul className="flex flex-col gap-4 mt-2">
-                {completedTodos.map((todo) => (
-                  <TaskCard key={todo.id} todo={todo} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
-                ))}
-              </ul>
-            </section>
-          )}
-          {isEmpty && <EmptyState />}
         </div>
         <div role="status" aria-live="polite" className="sr-only">
           {announcement.text}

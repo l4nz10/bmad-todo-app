@@ -103,10 +103,13 @@ describe('App', () => {
     expect(screen.getByRole('main')).toBeInTheDocument();
   });
 
-  it('shows empty state when no todos are loaded', () => {
+  it('shows empty state when no todos are loaded', async () => {
     mockFetchWithTodos([]);
     renderWithProviders();
-    expect(screen.getByText('No tasks yet')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('No tasks yet')).toBeInTheDocument();
+    });
   });
 
   it('applies responsive container classes', () => {
@@ -402,6 +405,130 @@ describe('App', () => {
     });
 
     expect(screen.getByText('First task')).toBeInTheDocument();
+  });
+
+  it('shows loading state while initial fetch is pending', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const { container } = renderWithProviders();
+
+    const loadingRegion = container.querySelector('[aria-busy="true"]');
+    expect(loadingRegion).toBeInTheDocument();
+    expect(screen.getByText('Loading tasks...')).toBeInTheDocument();
+  });
+
+  it('shows InputCard during loading state', () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    renderWithProviders();
+
+    expect(screen.getByPlaceholderText('Add a task...')).toBeInTheDocument();
+    expect(screen.getByText('Loading tasks...')).toBeInTheDocument();
+  });
+
+  it('shows error state when fetch fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent("Couldn't load your tasks");
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it('shows InputCard during error state', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+
+    expect(screen.getByPlaceholderText('Add a task...')).toBeInTheDocument();
+  });
+
+  it('replaces error state with task list after successful retry', async () => {
+    const user = userEvent.setup();
+    let callCount = 0;
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      callCount++;
+      if (callCount <= 1) {
+        return new Response(JSON.stringify({ error: 'Server error', statusCode: 500 }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response: ApiResponse<Todo[]> = { data: [...mockTodos], meta: { count: mockTodos.length } };
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('announces "Tasks loaded" via aria-live after successful fetch', async () => {
+    mockFetchWithTodos(mockTodos);
+    const { container } = renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument();
+    });
+
+    const liveRegion = container.querySelector('[aria-live="polite"][role="status"]');
+    expect(liveRegion).toHaveTextContent('Tasks loaded');
+  });
+
+  it('announces error via aria-live after failed fetch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
+    const { container } = renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+
+    const liveRegion = container.querySelector('[aria-live="polite"][role="status"]');
+    expect(liveRegion).toHaveTextContent("Couldn't load your tasks");
+  });
+
+  it('re-shows error state when retry also fails', async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response(JSON.stringify({ error: 'Server error', statusCode: 500 }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load your tasks");
   });
 
   it('has an aria-live region for screen reader announcements', async () => {

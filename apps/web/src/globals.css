@@ -46,4 +46,8 @@ body {
   .task-card-exiting {
     transition: none;
   }
+
+  .animate-pulse {
+    animation: none;
+  }
 }
