@@ -50,7 +50,15 @@
 - Auto-close effect fires before restore feedback — dialog closes immediately via useEffect when trashTodos becomes empty, before user processes the "Task restored" announcement
 - Rapid delete-then-delete overwrites `pendingUndo` silently — only the most recent deletion is undoable; prior deletions within the toast duration are committed
 - `daysRemaining` client/server off-by-one at day boundary — frontend uses `Math.floor` while backend compares ISO strings; can disagree by 1 day at boundaries
-- No permanent purge mechanism — soft-deleted items with `deleted=true` accumulate in the database indefinitely; TTL is only a display filter
+- ~~No permanent purge mechanism — soft-deleted items with `deleted=true` accumulate in the database indefinitely; TTL is only a display filter~~ **Resolved by Story 2.3**
 - `useTrashTodos` fetches with default staleTime(0) — triggers unnecessary background refetches on every window focus and component mount
 - `formatDate` in TrashDialog missing year at Dec/Jan boundary — shows "Dec 31" without year context when viewed in early January
 - No optimistic update on trash restore — user sees no immediate visual feedback during network round-trip
+
+## Deferred from: code review of 2-3-automatic-trash-purge (2026-04-10)
+
+- Duplicate DB connection per module — `registerTrashCleanup` creates its own SQLite connection, same as trashRoutes and todoRoutes. Established pattern; do not refactor now.
+- deletedAt nullable without isNotNull guard — `purgeExpiredTodos` uses `lt(todos.deletedAt, cutoff)` without guarding against NULL. If `deleted=true` and `deletedAt=null` (impossible in normal flow, no DB constraint), the row escapes purge forever. Same pattern in `listTrashedTodos`.
+- No batching/limit on unbounded DELETE — `purgeExpiredTodos` deletes all expired rows in a single statement. Scale concern if millions accumulate; not actionable for SQLite todo app now.
+- setInterval needs .unref() for clean exit — if `app.close()` is bypassed (e.g., uncaught exception), the interval keeps the Node process alive. Minor defensive measure.
+- Test code duplication and resource leak risk — all 5 cleanup tests repeat full setup/teardown boilerplate; if expect() throws before cleanup, temp dirs and app instances leak. Pre-existing pattern throughout test file.
