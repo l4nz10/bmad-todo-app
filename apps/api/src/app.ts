@@ -4,6 +4,7 @@ import { registerCors } from './plugins/cors.ts';
 import { registerHelmet } from './plugins/helmet.ts';
 import { registerTodoRoutes } from './routes/todoRoutes.ts';
 import { registerTrashRoutes } from './routes/trashRoutes.ts';
+import { registerTrashCleanup } from './plugins/trashCleanup.ts';
 
 export interface BuildAppOptions {
   databasePath?: string;
@@ -22,6 +23,7 @@ export async function buildApp(options?: BuildAppOptions) {
   const dbPath = options?.databasePath ?? config.databasePath;
   await registerTodoRoutes(app, dbPath);
   await registerTrashRoutes(app, dbPath);
+  await registerTrashCleanup(app, dbPath);
 
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     app.log.error(error);

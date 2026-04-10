@@ -174,6 +174,178 @@ describe('Trash Routes', () => {
     });
   });
 
+  describe('Trash Cleanup', () => {
+    it('purges items deleted more than 7 days ago', async () => {
+      const freshEnv = createTestApp();
+      const freshApp = await buildApp({ databasePath: freshEnv.dbPath });
+      await freshApp.ready();
+
+      const id = await createAndDeleteTodo(freshApp);
+
+      const { createDatabase } = await import('../../src/db/client.ts');
+      const { db } = createDatabase(freshEnv.dbPath);
+      const { todos: todosTable } = await import('../../src/db/schema.ts');
+      const { eq } = await import('drizzle-orm');
+
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      db.update(todosTable).set({ deletedAt: eightDaysAgo }).where(eq(todosTable.id, id)).run();
+
+      const { createTrashService } = await import('../../src/services/trashService.ts');
+      const trashService = createTrashService(db);
+      const result = trashService.purgeExpiredTodos();
+
+      expect(result.purgedCount).toBe(1);
+
+      const rows = db.select().from(todosTable).where(eq(todosTable.id, id)).all();
+      expect(rows.length).toBe(0);
+
+      await freshApp.close();
+      rmSync(freshEnv.tmpDir, { recursive: true, force: true });
+    });
+
+    it('preserves items deleted less than 7 days ago', async () => {
+      const freshEnv = createTestApp();
+      const freshApp = await buildApp({ databasePath: freshEnv.dbPath });
+      await freshApp.ready();
+
+      const id = await createAndDeleteTodo(freshApp);
+
+      const { createDatabase } = await import('../../src/db/client.ts');
+      const { db } = createDatabase(freshEnv.dbPath);
+      const { todos: todosTable } = await import('../../src/db/schema.ts');
+      const { eq } = await import('drizzle-orm');
+
+      const { createTrashService } = await import('../../src/services/trashService.ts');
+      const trashService = createTrashService(db);
+      const result = trashService.purgeExpiredTodos();
+
+      expect(result.purgedCount).toBe(0);
+
+      const rows = db.select().from(todosTable).where(eq(todosTable.id, id)).all();
+      expect(rows.length).toBe(1);
+
+      await freshApp.close();
+      rmSync(freshEnv.tmpDir, { recursive: true, force: true });
+    });
+
+    it('returns correct purgedCount for multiple expired items', async () => {
+      const freshEnv = createTestApp();
+      const freshApp = await buildApp({ databasePath: freshEnv.dbPath });
+      await freshApp.ready();
+
+      const id1 = await createAndDeleteTodo(freshApp);
+      const id2 = await createAndDeleteTodo(freshApp);
+      const id3 = await createAndDeleteTodo(freshApp);
+
+      const { createDatabase } = await import('../../src/db/client.ts');
+      const { db } = createDatabase(freshEnv.dbPath);
+      const { todos: todosTable } = await import('../../src/db/schema.ts');
+      const { eq } = await import('drizzle-orm');
+
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      db.update(todosTable).set({ deletedAt: eightDaysAgo }).where(eq(todosTable.id, id1)).run();
+      db.update(todosTable).set({ deletedAt: eightDaysAgo }).where(eq(todosTable.id, id2)).run();
+
+      const { createTrashService } = await import('../../src/services/trashService.ts');
+      const trashService = createTrashService(db);
+      const result = trashService.purgeExpiredTodos();
+
+      expect(result.purgedCount).toBe(2);
+
+      const rows1 = db.select().from(todosTable).where(eq(todosTable.id, id1)).all();
+      expect(rows1.length).toBe(0);
+      const rows2 = db.select().from(todosTable).where(eq(todosTable.id, id2)).all();
+      expect(rows2.length).toBe(0);
+      const rows3 = db.select().from(todosTable).where(eq(todosTable.id, id3)).all();
+      expect(rows3.length).toBe(1);
+
+      await freshApp.close();
+      rmSync(freshEnv.tmpDir, { recursive: true, force: true });
+    });
+
+    it('returns purgedCount 0 when no expired items exist', async () => {
+      const freshEnv = createTestApp();
+      const freshApp = await buildApp({ databasePath: freshEnv.dbPath });
+      await freshApp.ready();
+
+      const { createDatabase } = await import('../../src/db/client.ts');
+      const { db } = createDatabase(freshEnv.dbPath);
+
+      const { createTrashService } = await import('../../src/services/trashService.ts');
+      const trashService = createTrashService(db);
+      const result = trashService.purgeExpiredTodos();
+
+      expect(result.purgedCount).toBe(0);
+
+      await freshApp.close();
+      rmSync(freshEnv.tmpDir, { recursive: true, force: true });
+    });
+
+    it('GET /api/trash no longer returns purged items', async () => {
+      const freshEnv = createTestApp();
+      const freshApp = await buildApp({ databasePath: freshEnv.dbPath });
+      await freshApp.ready();
+
+      const expiredId = await createAndDeleteTodo(freshApp);
+      const recentId = await createAndDeleteTodo(freshApp);
+
+      const { createDatabase } = await import('../../src/db/client.ts');
+      const { db } = createDatabase(freshEnv.dbPath);
+      const { todos: todosTable } = await import('../../src/db/schema.ts');
+      const { eq } = await import('drizzle-orm');
+
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      db.update(todosTable).set({ deletedAt: eightDaysAgo }).where(eq(todosTable.id, expiredId)).run();
+
+      const { createTrashService } = await import('../../src/services/trashService.ts');
+      const trashService = createTrashService(db);
+      trashService.purgeExpiredTodos();
+
+      const response = await freshApp.inject({
+        method: 'GET',
+        url: '/api/trash',
+      });
+
+      const body = response.json();
+      expect(response.statusCode).toBe(200);
+      const purgedItem = body.data.find((t: { id: string }) => t.id === expiredId);
+      expect(purgedItem).toBeUndefined();
+      const recentItem = body.data.find((t: { id: string }) => t.id === recentId);
+      expect(recentItem).toBeDefined();
+
+      await freshApp.close();
+      rmSync(freshEnv.tmpDir, { recursive: true, force: true });
+    });
+
+    it('preserves items deleted exactly 7 days ago', async () => {
+      const freshEnv = createTestApp();
+      const freshApp = await buildApp({ databasePath: freshEnv.dbPath });
+      await freshApp.ready();
+
+      const id = await createAndDeleteTodo(freshApp);
+
+      const { createDatabase } = await import('../../src/db/client.ts');
+      const { db } = createDatabase(freshEnv.dbPath);
+      const { todos: todosTable } = await import('../../src/db/schema.ts');
+      const { eq } = await import('drizzle-orm');
+
+      const exactlySevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      db.update(todosTable).set({ deletedAt: exactlySevenDaysAgo }).where(eq(todosTable.id, id)).run();
+
+      const { createTrashService } = await import('../../src/services/trashService.ts');
+      const trashService = createTrashService(db);
+      const result = trashService.purgeExpiredTodos();
+
+      expect(result.purgedCount).toBe(0);
+
+      const rows = db.select().from(todosTable).where(eq(todosTable.id, id)).all();
+      expect(rows.length).toBe(1);
+
+      await freshApp.close();
+      rmSync(freshEnv.tmpDir, { recursive: true, force: true });
+    });
+  });
+
   describe('PATCH /api/trash/:id/restore', () => {
     it('restores a soft-deleted todo', async () => {
       const id = await createAndDeleteTodo(app);

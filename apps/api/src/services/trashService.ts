@@ -1,4 +1,4 @@
-import { eq, and, gte, desc } from 'drizzle-orm';
+import { eq, and, gte, lt, desc } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client.ts';
 import { todos } from '../db/schema.ts';
 import type { Todo } from '@bmad/shared';
@@ -43,6 +43,14 @@ export function createTrashService(db: AppDatabase) {
 
       const row = rows[0];
       return row ? toTodo(row) : null;
+    },
+
+    purgeExpiredTodos(): { purgedCount: number } {
+      const cutoff = new Date(Date.now() - TRASH_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      const result = db.delete(todos)
+        .where(and(eq(todos.deleted, true), lt(todos.deletedAt, cutoff)))
+        .run();
+      return { purgedCount: result.changes };
     },
   };
 }
